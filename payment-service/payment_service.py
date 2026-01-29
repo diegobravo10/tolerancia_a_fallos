@@ -17,7 +17,7 @@ def charge(reservationId: str, amount: float):
         print("⏳ Procesando pago lentamente...")
         time.sleep(20)  # 20 segundos de latencia
 
-    print(f"💰 Pago aprobado - reserva {reservationId}, monto {amount}")
+    print(f"Pago aprobado - reserva {reservationId}, monto {amount}")
     return True
 
 

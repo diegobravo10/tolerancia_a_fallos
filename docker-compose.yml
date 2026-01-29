@@ -1,0 +1,104 @@
+version: "3.9"
+
+services:
+
+  # =========================
+  # POSTGRES - RESERVATION
+  # =========================
+  postgres-reservation:
+    image: postgres:16
+    container_name: postgres-reservation
+    environment:
+      POSTGRES_DB: reservations_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - reservation_data:/var/lib/postgresql/data
+    networks:
+      - ticket-net
+
+  # =========================
+  # POSTGRES - INVENTORY
+  # =========================
+  postgres-inventory:
+    image: postgres:16
+    container_name: postgres-inventory
+    environment:
+      POSTGRES_DB: inventory_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - inventory_data:/var/lib/postgresql/data
+    networks:
+      - ticket-net
+
+  # =========================
+  # RESERVATION SERVICE
+  # =========================
+  reservation-service:
+    build: ./reservation-service
+    container_name: reservation-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-reservation:5432/reservations_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    depends_on:
+      - postgres-reservation
+      - inventory-service
+      - payment-service
+      - notification-service
+    networks:
+      - ticket-net
+
+  # =========================
+  # INVENTORY SERVICE
+  # =========================
+  inventory-service:
+    build: ./inventory-service
+    container_name: inventory-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-inventory:5432/inventory_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    depends_on:
+      - postgres-inventory
+    networks:
+      - ticket-net
+
+  # =========================
+  # PAYMENT SERVICE
+  # =========================
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    ports:
+      - "8083:8083"
+    networks:
+      - ticket-net
+
+  # =========================
+  # NOTIFICATION SERVICE
+  # =========================
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "8084:8084"
+    networks:
+      - ticket-net
+
+networks:
+  ticket-net:
+    driver: bridge
+
+volumes:
+  reservation_data:
+  inventory_data:

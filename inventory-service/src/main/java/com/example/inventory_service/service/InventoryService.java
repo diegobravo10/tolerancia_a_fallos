@@ -1,22 +1,31 @@
 package com.example.inventory_service.service;
+
+import com.example.inventory_service.entity.Seat;
+import com.example.inventory_service.repository.SeatRepository;
 import org.springframework.stereotype.Service;
 
 @Service
 public class InventoryService {
 
-    private boolean inventoryAvailable = true;
+    private final SeatRepository repository;
+
+    public InventoryService(SeatRepository repository) {
+        this.repository = repository;
+    }
 
     public void holdSeat(Long eventId, String seatId) {
 
-        if (!inventoryAvailable) {
-            throw new RuntimeException("Inventario caído");
+        Seat seat = repository.findById(seatId)
+                .orElseThrow(() -> new RuntimeException("Asiento no existe"));
+
+        if (!seat.isAvailable()) {
+            throw new RuntimeException("Asiento no disponible");
         }
 
-        System.out.println("✅ Asiento reservado: evento " + eventId + " asiento " + seatId);
-    }
+        // ❗ Sin locks → posible condición de carrera (Parte B)
+        seat.setAvailable(false);
+        repository.save(seat);
 
-    // Método solo para pruebas
-    public void setInventoryAvailable(boolean available) {
-        this.inventoryAvailable = available;
+        System.out.println("✅ Asiento reservado: " + seatId);
     }
 }

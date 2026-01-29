@@ -1,4 +1,5 @@
 package com.example.reservation_service.service;
+
 import com.example.reservation_service.client.InventoryClient;
 import com.example.reservation_service.client.NotificationClient;
 import com.example.reservation_service.client.PaymentClient;
@@ -29,10 +30,10 @@ public class ReservationService {
 
     public Reservation createReservation(ReserveRequest request) {
 
-        // 1. Inventario
+        // 1️⃣ Inventario (CRÍTICO)
         inventoryClient.reserveSeat(request.eventId(), request.seatId());
 
-        // 2. Guardar reserva (DB resiliente)
+        // 2️⃣ Guardar reserva (CREATED)
         Reservation reservation = save(new Reservation(
                 request.eventId(),
                 request.seatId(),
@@ -41,24 +42,30 @@ public class ReservationService {
                 "CREATED"
         ));
 
-        // 3. Pago
-        boolean paid = paymentClient.pay(request.amount()).join();
+        // 3️⃣ Pago (usa ID real de la reserva)
+        boolean paid = paymentClient
+                .pay(reservation.getId(), request.amount())
+                .join();
+
         if (!paid) {
             reservation.setStatus("PAYMENT_FAILED");
             save(reservation);
             throw new RuntimeException("Pago fallido");
         }
 
-        // 4. Confirmar
+        // 4️⃣ Confirmar reserva
         reservation.setStatus("CONFIRMED");
         save(reservation);
 
-        // 5. Notificación (no crítica)
+        // 5️⃣ Notificación (NO CRÍTICA)
         notificationClient.sendEmail(request.email());
 
         return reservation;
     }
 
+    // ===============================
+    // DB resiliente
+    // ===============================
     @CircuitBreaker(name = "dbCB", fallbackMethod = "dbFallback")
     @Retry(name = "dbRetry")
     public Reservation save(Reservation reservation) {
